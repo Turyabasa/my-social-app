@@ -1,0 +1,28 @@
+# Render Blueprint for the backend. The database is Neon (not a Render database), so DATABASE_URL
+# is entered by hand in the Render dashboard when the Blueprint is created (sync: false).
+services:
+  - type: web
+    name: social-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Free instances have no pre-deploy hook, so migrations run on every start (a no-op when current).
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.14"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon connection string: postgresql://USER:PASS@HOST/DB?sslmode=require
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false # e.g. https://your-frontend.vercel.app
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: lax
