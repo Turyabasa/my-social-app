@@ -134,16 +134,15 @@ Both are read at build time, so redeploy Vercel after changing them. Deployment 
 
 ### Continuous Deployment
 
-`.github/workflows/ci.yml` runs backend migrations/tests and frontend lint/build on pull requests and pushes to `main`. Only a successful push to `main` runs the production deploy job. It builds and deploys the frontend with the Vercel CLI, then triggers the Render backend deployment. Render's independent auto-deploy is disabled in `render.yaml` so commits cannot deploy before CI succeeds.
+`.github/workflows/ci.yml` runs backend migrations/tests and frontend lint/build on pull requests and pushes to `main`. Only a successful push to `main` runs the production deploy job. It builds and deploys the frontend with the Vercel CLI. Render uses its native `checksPass` auto-deploy trigger, so it deploys the linked commit only after GitHub checks pass. Sync this setting to the existing Render service if it is not managed by the Blueprint yet.
 
 Add these repository secrets under **Settings → Secrets and variables → Actions** before merging changes that should deploy:
 
 | Secret | Value |
 | --- | --- |
 | `VERCEL_TOKEN` | A Vercel access token with access to the `social-app2` team/project |
-| `RENDER_DEPLOY_HOOK` | The current deploy-hook URL for the `social-backend` Render service |
 
-Never put either value in the workflow, README, or repository variables. Rotate the Render deploy hook if it is exposed. GitHub Actions uses the existing production environment name `production`; configure protection rules there if deploy approvals are desired.
+Never put the token in the workflow, README, or repository variables. GitHub Actions uses the production environment name `production`; configure protection rules there if deploy approvals are desired.
 
 Verify the live services:
 

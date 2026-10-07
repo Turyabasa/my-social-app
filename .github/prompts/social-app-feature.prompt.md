@@ -14,7 +14,7 @@ Implement the requested change in this repository: ${input:task:Describe the fea
 - Frontend: Next.js App Router, TypeScript, Tailwind, and TanStack Query under `frontend/`.
 - Authentication uses JWTs in httpOnly cookies. The browser sends API requests to same-origin `/api/*`; Next.js rewrites them to FastAPI. WebSockets connect directly to FastAPI using a short-lived token.
 - Production runs on Vercel + Render + Neon. Environment variable names and public endpoints are documented in the README; never read secrets into chat, commit them, or include them in generated output.
-- Production deploys are controlled by `.github/workflows/ci.yml`: pull requests run checks only, and pushes to `main` deploy only after backend and frontend checks pass. Keep Render auto-deploy disabled and use GitHub Actions secrets for deploy credentials.
+- Production deploys are controlled by `.github/workflows/ci.yml`: pull requests run checks only, Vercel deploys from the gated `main` job, and Render uses its native `checksPass` trigger. Keep deploy credentials in GitHub Actions secrets.
 - Production Neon already contains 100 `demo_seed_####` accounts and 100 `#DemoData` posts. Do not duplicate, modify, or delete production data unless the task explicitly requests it.
 
 ## Working Rules
