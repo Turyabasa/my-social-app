@@ -10,7 +10,7 @@ services:
     # Free instances have no pre-deploy hook, so migrations run on every start (a no-op when current).
     startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: off
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.14"

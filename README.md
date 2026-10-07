@@ -98,24 +98,69 @@ Interactive docs are at `/docs` on the backend. Errors are always JSON: `{"detai
 | DELETE | `/api/follows/:username` | ✓ | 204 (idempotent) |
 | WS | `/ws/notifications?token=` | token | `{type, actor_username, actor_display_name, post_id}` |
 
-## Deploy (free tiers)
+## Production Deployment
 
-1. **Neon (database).** Create a project and copy the connection string (`postgresql://…?sslmode=require`). The backend converts it for asyncpg automatically. Prefer the direct, non-pooled host.
-2. **Render (backend).** Choose New → Blueprint, pick this repo, and `render.yaml` is used. When prompted:
-   - `DATABASE_URL`: the Neon string
-   - `CORS_ORIGINS`: your Vercel URL
+The production stack is deployed as a Vercel frontend, Render API, and Neon PostgreSQL database:
 
-   `SECRET_KEY` is generated for you. Migrations run on every start.
-3. **Vercel (frontend).** Import the repo and set **Root Directory** to `frontend`. Add these environment variables:
-   - `BACKEND_URL=https://<your-service>.onrender.com`
-   - `NEXT_PUBLIC_WS_URL=wss://<your-service>.onrender.com`
+| Service | Production URL / setting |
+| --- | --- |
+| Frontend | <https://frontend-ten-dun-h6h74enh9u.vercel.app> |
+| Backend | <https://social-backend-btsu.onrender.com> |
+| Database | Neon project `social-app`, branch `production` |
+| GitHub repository | <https://github.com/Turyabasa/my-social-app> |
 
-   Both are read at build time, so redeploy after changing them.
-4. Put the final Vercel URL into Render's `CORS_ORIGINS`.
+The Render service is named `social-backend`, uses Python 3.12.14, and runs from `backend/`. Its build command is `pip install -r requirements.txt`; its start command runs `alembic upgrade head` before Uvicorn. The health check is `/api/health`. These settings are also described in [`render.yaml`](render.yaml).
+
+Set these environment variables in Render. Do not commit real values or paste credentials into documentation:
+
+| Variable | Purpose |
+| --- | --- |
+| `ENVIRONMENT` | `production` |
+| `DATABASE_URL` | Neon PostgreSQL connection URL |
+| `SECRET_KEY` | Long random signing secret; generate it in Render |
+| `CORS_ORIGINS` | `https://frontend-ten-dun-h6h74enh9u.vercel.app` |
+| `COOKIE_SECURE` | `true` |
+| `COOKIE_SAMESITE` | `lax` |
+| `PYTHON_VERSION` | `3.12.14` |
+
+The Vercel project is `social-app2/frontend`, deployed from `frontend/`. Its production environment variables are:
+
+```text
+BACKEND_URL=https://social-backend-btsu.onrender.com
+NEXT_PUBLIC_WS_URL=wss://social-backend-btsu.onrender.com
+```
+
+Both are read at build time, so redeploy Vercel after changing them. Deployment Protection is disabled on the Vercel project so the site is public. The app itself redirects signed-out visits to `/` to `/login`; the login and explore pages remain available.
+
+### Continuous Deployment
+
+`.github/workflows/ci.yml` runs backend migrations/tests and frontend lint/build on pull requests and pushes to `main`. Only a successful push to `main` runs the production deploy job. It builds and deploys the frontend with the Vercel CLI, then triggers the Render backend deployment. Render's independent auto-deploy is disabled in `render.yaml` so commits cannot deploy before CI succeeds.
+
+Add these repository secrets under **Settings → Secrets and variables → Actions** before merging changes that should deploy:
+
+| Secret | Value |
+| --- | --- |
+| `VERCEL_TOKEN` | A Vercel access token with access to the `social-app2` team/project |
+| `RENDER_DEPLOY_HOOK` | The current deploy-hook URL for the `social-backend` Render service |
+
+Never put either value in the workflow, README, or repository variables. Rotate the Render deploy hook if it is exposed. GitHub Actions uses the existing production environment name `production`; configure protection rules there if deploy approvals are desired.
+
+Verify the live services:
+
+```bash
+curl https://social-backend-btsu.onrender.com/api/health
+curl 'https://social-backend-btsu.onrender.com/api/explore?page=1&limit=100'
+```
 
 Free-tier caveats:
-- Render's free instances sleep after about 15 minutes idle, so the first request takes around a minute and open WebSockets drop; the client reconnects on its own.
-- Notifications are held in the backend's memory, which only works while it runs as a single instance. Running more instances needs Redis or Postgres `LISTEN/NOTIFY`.
+- Render's free instance can spin down after inactivity, delaying the first request by 50 seconds or more; open WebSockets may disconnect and reconnect.
+- Notifications are held in backend memory and therefore require a single running instance. Multiple instances need Redis or PostgreSQL `LISTEN/NOTIFY`.
+
+## Production Sample Data
+
+The production database currently contains 100 demo accounts (`demo_seed_0001` through `demo_seed_0100`, with `@example.com` email addresses) and 100 sample posts tagged `#DemoData`. Each demo account has a random password hash whose original password was discarded, so these accounts are not usable for sign-in. The public explore API can display the posts. Avoid reseeding the same namespace or assigning passwords to these accounts.
+
+Local `.env` files are git-ignored. Keep Neon connection strings, JWT signing secrets, and other credentials in ignored local env files or the provider dashboards; rotate any credential that is exposed.
 
 ## Project layout
 
