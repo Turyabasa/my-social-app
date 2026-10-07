@@ -3,8 +3,10 @@
 import os
 from collections.abc import AsyncIterator
 
+default_user = os.environ.get("PGUSER") or os.environ.get("USER") or "postgres"
+default_db = os.environ.get("PGDATABASE") or "social_test"
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/social_test"
+    "TEST_DATABASE_URL", f"postgresql+asyncpg://{default_user}@localhost:5432/{default_db}"
 )
 # Must be set before `app` is imported: settings are read at import time.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
